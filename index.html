@@ -7,11 +7,9 @@
 
     <title>BulScan Admin Scanner</title>
 
-    <!-- QR SCANNER LIBRARY -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: transparent;
@@ -138,12 +136,18 @@
             background: #1557b0;
         }
 
+        .btn-danger {
+            background: #d93025;
+        }
+
+        .btn-danger:hover {
+            background: #b31412;
+        }
+
         .hidden {
             display: none !important;
         }
-
     </style>
-
 </head>
 
 <body>
@@ -156,24 +160,26 @@
         Scan a BulScan QR Code to find the registered item.
     </div>
 
-
-    <!-- CAMERA -->
-
+    <!-- CAMERA SCANNER -->
     <div id="reader"></div>
 
+    <!-- START SCAN BUTTON -->
+    <button
+        id="start-scan"
+        class="btn"
+    >
+        📷 START SCAN
+    </button>
 
     <!-- STATUS -->
-
     <div
         id="status"
         class="status"
     >
-        📷 Point the camera at a BulScan QR code.
+        Press START SCAN to activate the camera.
     </div>
 
-
     <!-- RESULT -->
-
     <div
         id="result"
         class="result hidden"
@@ -183,86 +189,54 @@
             ✅ Data Found
         </div>
 
-
         <div class="result-row">
-
-            <span class="result-label">
-                Code ID
-            </span>
-
+            <span class="result-label">Code ID</span>
             <div
                 id="result-code"
                 class="result-value code-value"
             ></div>
-
         </div>
 
-
         <div class="result-row">
-
-            <span class="result-label">
-                Item
-            </span>
-
+            <span class="result-label">Item</span>
             <div
                 id="result-item"
                 class="result-value"
             ></div>
-
         </div>
 
-
         <div class="result-row">
-
-            <span class="result-label">
-                Owner
-            </span>
-
+            <span class="result-label">Owner</span>
             <div
                 id="result-owner"
                 class="result-value"
             ></div>
-
         </div>
 
-
         <div class="result-row">
-
-            <span class="result-label">
-                Owner Email
-            </span>
-
+            <span class="result-label">Owner Email</span>
             <div
                 id="result-email"
                 class="result-value"
             ></div>
-
         </div>
 
-
         <div class="result-row">
-
-            <span class="result-label">
-                Status
-            </span>
-
+            <span class="result-label">Status</span>
             <div
                 id="result-status"
                 class="result-value"
             ></div>
-
         </div>
 
     </div>
 
-
     <!-- SCAN AGAIN -->
-
     <button
         id="scan-again"
         class="btn hidden"
     >
-        📷 Scan Another Code
+        📷 SCAN ANOTHER CODE
     </button>
 
 </div>
@@ -270,23 +244,22 @@
 
 <script type="module">
 
-
     /* ==========================================
-       FIREBASE IMPORT
+       FIREBASE IMPORTS
     ========================================== */
 
     import {
         initializeApp
-    }
-    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
     import {
         getFirestore,
-        doc,
+        collectionGroup,
+        query,
+        where,
+        getDocs,
         getDoc
-    }
-    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 
     /* ==========================================
@@ -315,7 +288,6 @@
 
         measurementId:
             "G-06X3YZ3VP4"
-
     };
 
 
@@ -324,10 +296,7 @@
     ========================================== */
 
     const app =
-        initializeApp(
-            firebaseConfig
-        );
-
+        initializeApp(firebaseConfig);
 
     const db =
         getFirestore(app);
@@ -338,39 +307,30 @@
     ========================================== */
 
     const status =
-        document.getElementById(
-            "status"
-        );
-
+        document.getElementById("status");
 
     const result =
-        document.getElementById(
-            "result"
-        );
+        document.getElementById("result");
 
+    const startScan =
+        document.getElementById("start-scan");
 
     const scanAgain =
-        document.getElementById(
-            "scan-again"
-        );
+        document.getElementById("scan-again");
 
 
     let scanner = null;
-
-    let isProcessing = false;
+    let scannerRunning = false;
+    let processingScan = false;
 
 
     /* ==========================================
        STATUS
     ========================================== */
 
-    function showStatus(
-        message,
-        type = ""
-    ) {
+    function showStatus(message, type = "") {
 
-        status.innerText =
-            message;
+        status.innerText = message;
 
         status.className =
             "status " + type;
@@ -380,54 +340,34 @@
 
     /* ==========================================
        EXTRACT CODE ID
+       
+       Compatible with generator:
+       
+       BUL-XXXXXXXX
     ========================================== */
 
-    function extractCodeID(
-        text
-    ) {
+    function extractCodeID(text) {
 
-        text =
-            text.trim();
-
-
-        /*
-         * The NEW generator creates QR codes
-         * containing ONLY:
-         *
-         * BUL-XXXXXXXXXXXX
-         */
+        text = text.trim();
 
         if (
-            /^BUL-[A-Z0-9-]+$/i.test(
-                text
-            )
+            text.toUpperCase().startsWith("BUL-")
         ) {
 
             return text.toUpperCase();
 
         }
 
-
-        /*
-         * Extra compatibility:
-         *
-         * If a QR contains other text but
-         * includes a BUL- code ID.
-         */
-
         const match =
             text.match(
                 /BUL-[A-Z0-9-]+/i
             );
 
-
         if (match) {
 
-            return match[0]
-                .toUpperCase();
+            return match[0].toUpperCase();
 
         }
-
 
         return null;
 
@@ -435,98 +375,73 @@
 
 
     /* ==========================================
-       FIND CODE IN FIREBASE
+       SEARCH FIREBASE
+       
+       Searches:
+       
+       users/{USER_ID}/items/{CODE_ID}
     ========================================== */
 
-    async function findCodeInFirebase(
-        codeID
-    ) {
+    async function findCodeInFirebase(codeID) {
 
-        /*
-         * IMPORTANT
-         *
-         * Your UPDATED GENERATOR creates:
-         *
-         * qrIndex
-         *     └── BUL-XXXXXXXXXXXX
-         *
-         * Therefore we directly search:
-         *
-         * qrIndex/{CODE_ID}
-         *
-         * No collection-group query.
-         * No Firestore index required.
-         */
-
-        const qrRef =
-            doc(
-                db,
-                "qrIndex",
-                codeID
+        const itemsQuery =
+            query(
+                collectionGroup(
+                    db,
+                    "items"
+                ),
+                where(
+                    "qrCodeId",
+                    "==",
+                    codeID
+                )
             );
 
 
-        const qrSnapshot =
-            await getDoc(
-                qrRef
+        const snapshot =
+            await getDocs(
+                itemsQuery
             );
 
 
-        /*
-         * CODE DOES NOT EXIST
-         */
-
-        if (
-            !qrSnapshot.exists()
-        ) {
+        if (snapshot.empty) {
 
             return null;
 
         }
 
 
-        const qrData =
-            qrSnapshot.data();
+        const itemDoc =
+            snapshot.docs[0];
+
+        const itemData =
+            itemDoc.data();
 
 
         /*
-         * The generator stores the
-         * Firebase Authentication UID
-         * here.
+         * Get:
+         *
+         * users/{USER_ID}
+         *
+         * from:
+         *
+         * users/{USER_ID}/items/{CODE_ID}
          */
 
-        const ownerId =
-            qrData.ownerId;
+        const userDocument =
+            itemDoc.ref.parent.parent;
 
 
-        if (!ownerId) {
-
-            console.error(
-                "QR record has no ownerId."
-            );
+        if (!userDocument) {
 
             return null;
 
         }
-
-
-        /*
-         * Find the owner's profile.
-         *
-         * users/{OWNER_UID}
-         */
-
-        const userRef =
-            doc(
-                db,
-                "users",
-                ownerId
-            );
 
 
         const userSnapshot =
             await getDoc(
-                userRef
+                userDocument
             );
 
 
@@ -537,9 +452,7 @@
             "Unknown";
 
 
-        if (
-            userSnapshot.exists()
-        ) {
+        if (userSnapshot.exists()) {
 
             const userData =
                 userSnapshot.data();
@@ -557,23 +470,18 @@
         }
 
 
-        /*
-         * Return all information
-         * needed by the scanner.
-         */
-
         return {
 
             codeID:
-                qrData.qrCodeId ||
+                itemData.qrCodeId ||
                 codeID,
 
             itemName:
-                qrData.itemName ||
+                itemData.itemName ||
                 "Unnamed Item",
 
             status:
-                qrData.status ||
+                itemData.status ||
                 "Unknown",
 
             ownerName:
@@ -591,46 +499,34 @@
        DISPLAY RESULT
     ========================================== */
 
-    function displayResult(
-        data
-    ) {
+    function displayResult(data) {
 
         document
-            .getElementById(
-                "result-code"
-            )
+            .getElementById("result-code")
             .innerText =
             data.codeID;
 
 
         document
-            .getElementById(
-                "result-item"
-            )
+            .getElementById("result-item")
             .innerText =
             data.itemName;
 
 
         document
-            .getElementById(
-                "result-owner"
-            )
+            .getElementById("result-owner")
             .innerText =
             data.ownerName;
 
 
         document
-            .getElementById(
-                "result-email"
-            )
+            .getElementById("result-email")
             .innerText =
             data.ownerEmail;
 
 
         document
-            .getElementById(
-                "result-status"
-            )
+            .getElementById("result-status")
             .innerText =
             data.status;
 
@@ -639,65 +535,30 @@
             "hidden"
         );
 
-
-        scanAgain.classList.remove(
-            "hidden"
-        );
-
     }
 
 
     /* ==========================================
-       HANDLE QR SCAN
+       HANDLE SCAN
     ========================================== */
 
-    async function handleScan(
-        decodedText
-    ) {
+    async function handleScan(decodedText) {
 
-        /*
-         * Prevent the camera from
-         * processing the same QR multiple times.
-         */
-
-        if (
-            isProcessing
-        ) {
+        if (processingScan) {
 
             return;
 
         }
 
-
-        isProcessing =
-            true;
+        processingScan = true;
 
 
         /*
-         * Stop scanner.
+         * Stop scanner after successful scan
          */
 
-        if (scanner) {
+        await stopScanner();
 
-            try {
-
-                await scanner.clear();
-
-            }
-            catch (error) {
-
-                console.log(
-                    "Scanner stopped."
-                );
-
-            }
-
-        }
-
-
-        /* ======================================
-           EXTRACT CODE
-        ====================================== */
 
         const codeID =
             extractCodeID(
@@ -705,9 +566,7 @@
             );
 
 
-        /*
-         * INVALID QR FORMAT
-         */
+        /* INVALID QR FORMAT */
 
         if (!codeID) {
 
@@ -716,24 +575,18 @@
                 "invalid"
             );
 
-
             scanAgain.classList.remove(
                 "hidden"
             );
 
-
-            isProcessing =
-                false;
-
+            processingScan = false;
 
             return;
 
         }
 
 
-        /* ======================================
-           SEARCH FIREBASE
-        ====================================== */
+        /* SEARCH FIREBASE */
 
         showStatus(
             "🔎 Searching BulScan database...",
@@ -749,9 +602,7 @@
                 );
 
 
-            /*
-             * CODE NOT FOUND
-             */
+            /* CODE NOT FOUND */
 
             if (!data) {
 
@@ -760,24 +611,18 @@
                     "invalid"
                 );
 
-
                 scanAgain.classList.remove(
                     "hidden"
                 );
 
-
-                isProcessing =
-                    false;
-
+                processingScan = false;
 
                 return;
 
             }
 
 
-            /*
-             * CODE FOUND
-             */
+            /* FOUND */
 
             showStatus(
                 "✅ QR code verified.",
@@ -790,18 +635,22 @@
             );
 
 
+            scanAgain.classList.remove(
+                "hidden"
+            );
+
+
         }
         catch (error) {
 
             console.error(
-                "Firebase error:",
+                "Firebase search error:",
                 error
             );
 
 
             showStatus(
-                "❌ Firebase error: " +
-                error.message,
+                "❌ Unable to search database.",
                 "invalid"
             );
 
@@ -812,58 +661,56 @@
 
         }
 
+
+        processingScan = false;
+
     }
 
 
     /* ==========================================
-       START CAMERA
+       START SCANNER
     ========================================== */
 
     async function startScanner() {
 
+        /*
+         * Prevent duplicate scanners
+         */
+
+        if (scannerRunning) {
+
+            return;
+
+        }
+
+
         result.classList.add(
             "hidden"
         );
-
 
         scanAgain.classList.add(
             "hidden"
         );
 
 
-        isProcessing =
-            false;
-
-
         showStatus(
-            "📷 Point the camera at a BulScan QR code."
+            "📷 Starting camera..."
         );
 
 
-        /*
-         * Remove previous scanner
-         * if one exists.
-         */
+        startScan.disabled = true;
 
-        if (scanner) {
-
-            try {
-
-                await scanner.clear();
-
-            }
-            catch (error) {}
-
-        }
-
-
-        scanner =
-            new Html5Qrcode(
-                "reader"
-            );
+        startScan.innerText =
+            "Starting Camera...";
 
 
         try {
+
+            scanner =
+                new Html5Qrcode(
+                    "reader"
+                );
+
 
             await scanner.start(
 
@@ -878,9 +725,7 @@
                     qrbox: {
                         width: 250,
                         height: 250
-                    },
-
-                    aspectRatio: 1.0
+                    }
 
                 },
 
@@ -895,16 +740,26 @@
                 (errorMessage) => {
 
                     /*
-                     * Normal camera scanning
-                     * produces many temporary
-                     * scan errors.
-                     *
-                     * Do nothing here.
+                     * Normal scanning errors
+                     * are intentionally ignored.
                      */
 
                 }
 
             );
+
+
+            scannerRunning = true;
+
+
+            showStatus(
+                "📷 Point the camera at a BulScan QR code."
+            );
+
+
+            startScan.innerText =
+                "🛑 SCANNING...";
+
 
         }
         catch (error) {
@@ -915,10 +770,21 @@
             );
 
 
+            scanner = null;
+
+            scannerRunning = false;
+
+
             showStatus(
                 "❌ Camera could not be opened. Please allow camera permission.",
                 "invalid"
             );
+
+
+            startScan.disabled = false;
+
+            startScan.innerText =
+                "📷 START SCAN";
 
         }
 
@@ -926,36 +792,98 @@
 
 
     /* ==========================================
-       SCAN AGAIN
+       STOP SCANNER
     ========================================== */
 
-    scanAgain.addEventListener(
+    async function stopScanner() {
+
+        if (!scanner) {
+
+            return;
+
+        }
+
+
+        try {
+
+            if (scannerRunning) {
+
+                await scanner.stop();
+
+            }
+
+            await scanner.clear();
+
+        }
+        catch (error) {
+
+            console.log(
+                "Scanner already stopped."
+            );
+
+        }
+
+
+        scanner = null;
+
+        scannerRunning = false;
+
+
+        startScan.disabled = false;
+
+        startScan.innerText =
+            "📷 START SCAN";
+
+    }
+
+
+    /* ==========================================
+       START SCAN BUTTON
+    ========================================== */
+
+    startScan.addEventListener(
         "click",
         async () => {
 
-            try {
-
-                if (scanner) {
-
-                    await scanner.clear();
-
-                }
-
-            }
-            catch (error) {}
-
-
-            startScanner();
+            await startScanner();
 
         }
     );
 
 
     /* ==========================================
-       START SCANNER
+       SCAN AGAIN BUTTON
     ========================================== */
 
-    startScanner();
+    scanAgain.addEventListener(
+        "click",
+        async () => {
+
+            result.classList.add(
+                "hidden"
+            );
+
+            scanAgain.classList.add(
+                "hidden"
+            );
+
+            processingScan = false;
+
+            await startScanner();
+
+        }
+    );
+
+
+    /*
+     * IMPORTANT:
+     *
+     * Scanner does NOT start automatically.
+     *
+     * The page only displays:
+     *
+     * "Press START SCAN to activate camera."
+     */
 
 </script>
 
