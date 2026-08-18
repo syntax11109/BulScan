@@ -63,6 +63,7 @@
             font-size: 13px;
             background: #f8f9fa;
             color: #5f6368;
+            word-break: break-word;
         }
 
         .result {
@@ -156,112 +157,65 @@
         Scan a BulScan QR Code to find the registered item.
     </div>
 
-
     <!-- CAMERA SCANNER -->
-
     <div id="reader"></div>
 
-
     <!-- STATUS -->
-
-    <div
-        id="status"
-        class="status"
-    >
+    <div id="status" class="status">
         📷 Point the camera at a BulScan QR code.
     </div>
 
-
     <!-- RESULT -->
-
-    <div
-        id="result"
-        class="result hidden"
-    >
+    <div id="result" class="result hidden">
 
         <div class="result-title">
             ✅ Data Found
         </div>
 
-
         <div class="result-row">
-
             <span class="result-label">
                 Code ID
             </span>
 
-            <div
-                id="result-code"
-                class="result-value code-value"
-            ></div>
-
+            <div id="result-code" class="result-value code-value"></div>
         </div>
 
-
         <div class="result-row">
-
             <span class="result-label">
                 Item
             </span>
 
-            <div
-                id="result-item"
-                class="result-value"
-            ></div>
-
+            <div id="result-item" class="result-value"></div>
         </div>
 
-
         <div class="result-row">
-
             <span class="result-label">
                 Owner
             </span>
 
-            <div
-                id="result-owner"
-                class="result-value"
-            ></div>
-
+            <div id="result-owner" class="result-value"></div>
         </div>
 
-
         <div class="result-row">
-
             <span class="result-label">
                 Owner Email
             </span>
 
-            <div
-                id="result-email"
-                class="result-value"
-            ></div>
-
+            <div id="result-email" class="result-value"></div>
         </div>
 
-
         <div class="result-row">
-
             <span class="result-label">
                 Status
             </span>
 
-            <div
-                id="result-status"
-                class="result-value"
-            ></div>
-
+            <div id="result-status" class="result-value"></div>
         </div>
 
     </div>
 
-
     <!-- SCAN AGAIN -->
-
-    <button
-        id="scan-again"
-        class="btn hidden"
-    >
+    <button id="scan-again" class="btn hidden">
         📷 Scan Another Code
     </button>
 
@@ -276,8 +230,7 @@
 
     import {
         initializeApp
-    }
-    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
 
     import {
@@ -286,10 +239,8 @@
         query,
         where,
         getDocs,
-        doc,
         getDoc
-    }
-    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 
     /* ==========================================
@@ -341,10 +292,8 @@
     const status =
         document.getElementById("status");
 
-
     const result =
         document.getElementById("result");
-
 
     const scanAgain =
         document.getElementById("scan-again");
@@ -386,13 +335,13 @@
             text.toUpperCase().startsWith("BUL-")
         ) {
 
-            return text.trim();
+            return text.toUpperCase();
 
         }
 
 
         /*
-         * This also supports older QR codes
+         * Also supports older QR codes
          * containing:
          *
          * CODE-ID: BUL-ABC12345
@@ -423,9 +372,9 @@
     async function findCodeInFirebase(codeID) {
 
         /*
-         * Search ALL "items" collections.
+         * Search ALL "items" subcollections.
          *
-         * This means:
+         * Example:
          *
          * users/A/items
          * users/B/items
@@ -478,11 +427,11 @@
 
 
         /*
-         * Because the path is:
+         * Expected path:
          *
          * users/{USER_ID}/items/{CODE_ID}
          *
-         * the parent.parent gives us
+         * parent.parent gives us
          * the user document.
          */
 
@@ -650,9 +599,11 @@
                 "invalid"
             );
 
+
             scanAgain.classList.remove(
                 "hidden"
             );
+
 
             return;
 
@@ -688,9 +639,11 @@
                     "invalid"
                 );
 
+
                 scanAgain.classList.remove(
                     "hidden"
                 );
+
 
                 return;
 
@@ -713,6 +666,7 @@
 
 
         }
+
         catch (error) {
 
             console.error(
@@ -721,8 +675,17 @@
             );
 
 
+            /*
+             * IMPORTANT:
+             *
+             * Instead of only saying
+             * "Unable to search database",
+             * display the actual Firebase
+             * error on the tablet.
+             */
+
             showStatus(
-                "❌ Unable to search database.",
+                "❌ Firebase Error: " + error.message,
                 "invalid"
             );
 
@@ -755,6 +718,22 @@
         showStatus(
             "📷 Point the camera at a BulScan QR code."
         );
+
+
+        /*
+         * Prevent multiple scanner instances.
+         */
+
+        if (scanner) {
+
+            try {
+
+                scanner.clear();
+
+            }
+            catch (error) {}
+
+        }
 
 
         scanner =
@@ -791,19 +770,22 @@
             (errorMessage) => {
 
                 /*
-                 * Normal camera scanning produces
+                 * Normal QR scanning produces
                  * many "not found" messages.
                  *
-                 * We intentionally don't display them.
+                 * We intentionally don't
+                 * display them.
                  */
 
             }
 
         )
+
         .catch(
             (error) => {
 
                 console.error(
+                    "Camera error:",
                     error
                 );
 
