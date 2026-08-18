@@ -4,11 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>BulScan Admin Scanner</title>
 
+    <!-- QR SCANNER LIBRARY -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: transparent;
@@ -26,12 +29,13 @@
             border-radius: 10px;
             padding: 20px;
             box-sizing: border-box;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
             text-align: center;
         }
 
         h2 {
-            margin: 0 0 5px;
+            margin-top: 0;
+            margin-bottom: 5px;
             color: #1a73e8;
             font-size: 21px;
         }
@@ -49,7 +53,6 @@
         }
 
         #reader video {
-            width: 100% !important;
             border-radius: 8px;
         }
 
@@ -139,16 +142,8 @@
             display: none !important;
         }
 
-        .camera-error {
-            padding: 15px;
-            margin-top: 15px;
-            border-radius: 6px;
-            background: #fce8e6;
-            color: #c5221f;
-            font-size: 13px;
-            line-height: 1.5;
-        }
     </style>
+
 </head>
 
 <body>
@@ -158,51 +153,115 @@
     <h2>BulScan Scanner</h2>
 
     <div class="subtitle">
-        Scan a BulScan QR code to find the registered item.
+        Scan a BulScan QR Code to find the registered item.
     </div>
+
+
+    <!-- CAMERA SCANNER -->
 
     <div id="reader"></div>
 
-    <div id="camera-error" class="camera-error hidden"></div>
 
-    <div id="status" class="status">
-        📷 Starting camera...
+    <!-- STATUS -->
+
+    <div
+        id="status"
+        class="status"
+    >
+        📷 Point the camera at a BulScan QR code.
     </div>
 
-    <div id="result" class="result hidden">
+
+    <!-- RESULT -->
+
+    <div
+        id="result"
+        class="result hidden"
+    >
 
         <div class="result-title">
             ✅ Data Found
         </div>
 
-        <div class="result-row">
-            <span class="result-label">Code ID</span>
-            <div id="result-code" class="result-value code-value"></div>
-        </div>
 
         <div class="result-row">
-            <span class="result-label">Item</span>
-            <div id="result-item" class="result-value"></div>
+
+            <span class="result-label">
+                Code ID
+            </span>
+
+            <div
+                id="result-code"
+                class="result-value code-value"
+            ></div>
+
         </div>
 
-        <div class="result-row">
-            <span class="result-label">Owner</span>
-            <div id="result-owner" class="result-value"></div>
-        </div>
 
         <div class="result-row">
-            <span class="result-label">Owner Email</span>
-            <div id="result-email" class="result-value"></div>
+
+            <span class="result-label">
+                Item
+            </span>
+
+            <div
+                id="result-item"
+                class="result-value"
+            ></div>
+
         </div>
 
+
         <div class="result-row">
-            <span class="result-label">Status</span>
-            <div id="result-status" class="result-value"></div>
+
+            <span class="result-label">
+                Owner
+            </span>
+
+            <div
+                id="result-owner"
+                class="result-value"
+            ></div>
+
+        </div>
+
+
+        <div class="result-row">
+
+            <span class="result-label">
+                Owner Email
+            </span>
+
+            <div
+                id="result-email"
+                class="result-value"
+            ></div>
+
+        </div>
+
+
+        <div class="result-row">
+
+            <span class="result-label">
+                Status
+            </span>
+
+            <div
+                id="result-status"
+                class="result-value"
+            ></div>
+
         </div>
 
     </div>
 
-    <button id="scan-again" class="btn hidden">
+
+    <!-- SCAN AGAIN -->
+
+    <button
+        id="scan-again"
+        class="btn hidden"
+    >
         📷 Scan Another Code
     </button>
 
@@ -211,13 +270,15 @@
 
 <script type="module">
 
-    /* =====================================================
-       FIREBASE
-    ===================================================== */
+    /* ==========================================
+       FIREBASE IMPORTS
+    ========================================== */
 
     import {
         initializeApp
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    }
+    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+
 
     import {
         getFirestore,
@@ -225,13 +286,15 @@
         query,
         where,
         getDocs,
+        doc,
         getDoc
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    }
+    from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 
-    /* =====================================================
+    /* ==========================================
        FIREBASE CONFIG
-    ===================================================== */
+    ========================================== */
 
     const firebaseConfig = {
 
@@ -255,49 +318,58 @@
 
         measurementId:
             "G-06X3YZ3VP4"
+
     };
 
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    /* ==========================================
+       INITIALIZE FIREBASE
+    ========================================== */
+
+    const app =
+        initializeApp(firebaseConfig);
 
 
-    /* =====================================================
+    const db =
+        getFirestore(app);
+
+
+    /* ==========================================
        ELEMENTS
-    ===================================================== */
+    ========================================== */
 
     const status =
         document.getElementById("status");
 
+
     const result =
         document.getElementById("result");
+
 
     const scanAgain =
         document.getElementById("scan-again");
 
-    const cameraError =
-        document.getElementById("camera-error");
-
 
     let scanner = null;
-    let processingScan = false;
 
 
-    /* =====================================================
-       STATUS
-    ===================================================== */
+    /* ==========================================
+       SHOW STATUS
+    ========================================== */
 
     function showStatus(message, type = "") {
 
         status.innerText = message;
-        status.className = "status " + type;
+
+        status.className =
+            "status " + type;
 
     }
 
 
-    /* =====================================================
-       EXTRACT CODE ID FROM QR
-    ===================================================== */
+    /* ==========================================
+       EXTRACT CODE ID
+    ========================================== */
 
     function extractCodeID(text) {
 
@@ -305,33 +377,31 @@
 
 
         /*
-         * New QR format:
+         * Normally the QR contains only:
          *
-         * BUL-XXXXXXXX
+         * BUL-ABC12345
          */
 
         if (
             text.toUpperCase().startsWith("BUL-")
         ) {
 
-            return text.toUpperCase();
+            return text.trim();
 
         }
 
 
         /*
-         * Also supports:
+         * This also supports older QR codes
+         * containing:
          *
-         * ID: BUL-XXXXXXXX
-         *
-         * or
-         *
-         * URL: ...
-         * ID: BUL-XXXXXXXX
+         * CODE-ID: BUL-ABC12345
          */
 
         const match =
-            text.match(/BUL-[A-Z0-9-]+/i);
+            text.match(
+                /BUL-[A-Z0-9-]+/i
+            );
 
 
         if (match) {
@@ -346,29 +416,47 @@
     }
 
 
-    /* =====================================================
+    /* ==========================================
        SEARCH FIREBASE
-    ===================================================== */
+    ========================================== */
 
     async function findCodeInFirebase(codeID) {
 
         /*
-         * Searches:
+         * Search ALL "items" collections.
          *
-         * users/{userId}/items/{itemId}
+         * This means:
          *
-         * across ALL users.
+         * users/A/items
+         * users/B/items
+         * users/C/items
+         *
+         * are all searched.
          */
 
-        const itemsQuery = query(
-            collectionGroup(db, "items"),
-            where("qrCodeId", "==", codeID)
-        );
+        const itemsQuery =
+            query(
+                collectionGroup(
+                    db,
+                    "items"
+                ),
+                where(
+                    "qrCodeId",
+                    "==",
+                    codeID
+                )
+            );
 
 
         const snapshot =
-            await getDocs(itemsQuery);
+            await getDocs(
+                itemsQuery
+            );
 
+
+        /*
+         * Nothing found
+         */
 
         if (snapshot.empty) {
 
@@ -377,17 +465,25 @@
         }
 
 
+        /*
+         * Get the first matching item
+         */
+
         const itemDoc =
             snapshot.docs[0];
+
 
         const itemData =
             itemDoc.data();
 
 
         /*
-         * Expected path:
+         * Because the path is:
          *
          * users/{USER_ID}/items/{CODE_ID}
+         *
+         * the parent.parent gives us
+         * the user document.
          */
 
         const userDocument =
@@ -401,12 +497,21 @@
         }
 
 
+        /*
+         * Get owner information
+         */
+
         const userSnapshot =
-            await getDoc(userDocument);
+            await getDoc(
+                userDocument
+            );
 
 
-        let ownerName = "Unknown Owner";
-        let ownerEmail = "Unknown";
+        let ownerName =
+            "Unknown Owner";
+
+        let ownerEmail =
+            "Unknown";
 
 
         if (userSnapshot.exists()) {
@@ -414,9 +519,11 @@
             const userData =
                 userSnapshot.data();
 
+
             ownerName =
                 userData.fullName ||
                 "Unknown Owner";
+
 
             ownerEmail =
                 userData.email ||
@@ -450,70 +557,75 @@
     }
 
 
-    /* =====================================================
+    /* ==========================================
        DISPLAY RESULT
-    ===================================================== */
+    ========================================== */
 
     function displayResult(data) {
 
-        document.getElementById(
-            "result-code"
-        ).innerText = data.codeID;
+        document
+            .getElementById("result-code")
+            .innerText =
+            data.codeID;
 
 
-        document.getElementById(
-            "result-item"
-        ).innerText = data.itemName;
+        document
+            .getElementById("result-item")
+            .innerText =
+            data.itemName;
 
 
-        document.getElementById(
-            "result-owner"
-        ).innerText = data.ownerName;
+        document
+            .getElementById("result-owner")
+            .innerText =
+            data.ownerName;
 
 
-        document.getElementById(
-            "result-email"
-        ).innerText = data.ownerEmail;
+        document
+            .getElementById("result-email")
+            .innerText =
+            data.ownerEmail;
 
 
-        document.getElementById(
-            "result-status"
-        ).innerText = data.status;
+        document
+            .getElementById("result-status")
+            .innerText =
+            data.status;
 
 
-        result.classList.remove("hidden");
-        scanAgain.classList.remove("hidden");
+        result.classList.remove(
+            "hidden"
+        );
+
+
+        scanAgain.classList.remove(
+            "hidden"
+        );
 
     }
 
 
-    /* =====================================================
-       HANDLE SCANNED QR
-    ===================================================== */
+    /* ==========================================
+       QR WAS SCANNED
+    ========================================== */
 
     async function handleScan(decodedText) {
 
-        if (processingScan) {
-            return;
-        }
-
-        processingScan = true;
-
-
         /*
-         * Stop scanner
+         * Stop accepting additional scans
          */
 
         if (scanner) {
 
             try {
 
-                await scanner.stop();
+                await scanner.clear();
 
-            } catch (error) {
+            }
+            catch (error) {
 
                 console.log(
-                    "Scanner already stopped."
+                    "Scanner stopped."
                 );
 
             }
@@ -522,11 +634,13 @@
 
 
         const codeID =
-            extractCodeID(decodedText);
+            extractCodeID(
+                decodedText
+            );
 
 
         /*
-         * QR DOES NOT CONTAIN A VALID BULSCAN ID
+         * INVALID QR FORMAT
          */
 
         if (!codeID) {
@@ -539,8 +653,6 @@
             scanAgain.classList.remove(
                 "hidden"
             );
-
-            processingScan = false;
 
             return;
 
@@ -566,7 +678,7 @@
 
 
             /*
-             * NOT FOUND
+             * CODE DOES NOT EXIST
              */
 
             if (!data) {
@@ -579,8 +691,6 @@
                 scanAgain.classList.remove(
                     "hidden"
                 );
-
-                processingScan = false;
 
                 return;
 
@@ -597,19 +707,22 @@
             );
 
 
-            displayResult(data);
+            displayResult(
+                data
+            );
+
 
         }
         catch (error) {
 
             console.error(
-                "Firebase error:",
+                "Firebase search error:",
                 error
             );
 
 
             showStatus(
-                "❌ Database search failed.",
+                "❌ Unable to search database.",
                 "invalid"
             );
 
@@ -620,105 +733,28 @@
 
         }
 
-
-        processingScan = false;
-
     }
 
 
-    /* =====================================================
-       CAMERA ERROR
-    ===================================================== */
+    /* ==========================================
+       START SCANNER
+    ========================================== */
 
-    function showCameraError(error) {
-
-        console.error(
-            "Camera error:",
-            error
-        );
-
-
-        let message =
-            "❌ Camera could not be opened.";
-
-
-        if (
-            window.location.protocol !== "https:" &&
-            window.location.hostname !== "localhost"
-        ) {
-
-            message +=
-                "<br><br>This scanner requires HTTPS.";
-
-        }
-
-
-        message +=
-            "<br><br>Make sure camera permission is allowed for the published Google Sites page.";
-
-
-        cameraError.innerHTML =
-            message;
-
-        cameraError.classList.remove(
-            "hidden"
-        );
-
-
-        showStatus(
-            "❌ Camera unavailable.",
-            "invalid"
-        );
-
-    }
-
-
-    /* =====================================================
-       START CAMERA
-    ===================================================== */
-
-    async function startScanner() {
-
-        processingScan = false;
-
+    function startScanner() {
 
         result.classList.add(
             "hidden"
         );
 
-        scanAgain.classList.add(
-            "hidden"
-        );
 
-        cameraError.classList.add(
+        scanAgain.classList.add(
             "hidden"
         );
 
 
         showStatus(
-            "📷 Starting camera..."
+            "📷 Point the camera at a BulScan QR code."
         );
-
-
-        /*
-         * Clear previous scanner
-         */
-
-        if (scanner) {
-
-            try {
-
-                await scanner.clear();
-
-            } catch (error) {
-
-                console.log(
-                    "Previous scanner cleared."
-                );
-
-            }
-
-        }
 
 
         scanner =
@@ -727,91 +763,91 @@
             );
 
 
-        try {
+        scanner.start(
 
-            /*
-             * Ask the browser for the
-             * rear-facing camera.
-             */
+            {
+                facingMode:
+                    "environment"
+            },
 
-            await scanner.start(
+            {
+                fps: 10,
 
-                {
-                    facingMode: {
-                        ideal: "environment"
-                    }
-                },
-
-                {
-                    fps: 10,
-
-                    qrbox: {
-                        width: 250,
-                        height: 250
-                    },
-
-                    aspectRatio: 1.0
-
-                },
-
-                function(decodedText) {
-
-                    handleScan(
-                        decodedText
-                    );
-
-                },
-
-                function(errorMessage) {
-
-                    /*
-                     * Ignore normal QR
-                     * detection errors.
-                     */
-
+                qrbox: {
+                    width: 250,
+                    height: 250
                 }
 
-            );
+            },
+
+            (decodedText) => {
+
+                handleScan(
+                    decodedText
+                );
+
+            },
+
+            (errorMessage) => {
+
+                /*
+                 * Normal camera scanning produces
+                 * many "not found" messages.
+                 *
+                 * We intentionally don't display them.
+                 */
+
+            }
+
+        )
+        .catch(
+            (error) => {
+
+                console.error(
+                    error
+                );
 
 
-            /*
-             * Camera successfully started.
-             */
+                showStatus(
+                    "❌ Camera could not be opened. Please allow camera permission.",
+                    "invalid"
+                );
 
-            showStatus(
-                "📷 Camera active. Point it at a BulScan QR code."
-            );
-
-
-        }
-        catch (error) {
-
-            showCameraError(
-                error
-            );
-
-        }
+            }
+        );
 
     }
 
 
-    /* =====================================================
+    /* ==========================================
        SCAN AGAIN
-    ===================================================== */
+    ========================================== */
 
     scanAgain.addEventListener(
         "click",
-        async function() {
+        () => {
 
-            await startScanner();
+            if (scanner) {
+
+                try {
+
+                    scanner.clear();
+
+                }
+                catch (error) {}
+
+            }
+
+
+            startScanner();
 
         }
     );
 
 
-    /* =====================================================
-       START
-    ===================================================== */
+    /* ==========================================
+       START WHEN PAGE LOADS
+    ========================================== */
 
     startScanner();
 
