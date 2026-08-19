@@ -7,7 +7,6 @@
 
     <title>BulScan Admin Scanner</title>
 
-    <!-- QR SCANNER LIBRARY -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
@@ -105,7 +104,7 @@
         }
 
         .points-value {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
             color: #f9ab00;
         }
@@ -162,120 +161,69 @@
         Scan a BulScan QR Code to find the registered item.
     </div>
 
-    <!-- CAMERA -->
-
     <div id="reader"></div>
 
-    <!-- STATUS -->
-
-    <div
-        id="status"
-        class="status"
-    >
+    <div id="status" class="status">
         📷 Point the camera at a BulScan QR code.
     </div>
 
-    <!-- RESULT -->
-
-    <div
-        id="result"
-        class="result hidden"
-    >
+    <div id="result" class="result hidden">
 
         <div class="result-title">
             ✅ Data Found
         </div>
 
         <div class="result-row">
-
             <span class="result-label">
                 Code ID
             </span>
 
-            <div
-                id="result-code"
-                class="result-value code-value"
-            ></div>
-
+            <div id="result-code" class="result-value code-value"></div>
         </div>
 
         <div class="result-row">
-
             <span class="result-label">
                 Item
             </span>
 
-            <div
-                id="result-item"
-                class="result-value"
-            ></div>
-
+            <div id="result-item" class="result-value"></div>
         </div>
 
         <div class="result-row">
-
             <span class="result-label">
                 Owner
             </span>
 
-            <div
-                id="result-owner"
-                class="result-value"
-            ></div>
-
+            <div id="result-owner" class="result-value"></div>
         </div>
 
         <div class="result-row">
-
             <span class="result-label">
                 Owner Email
             </span>
 
-            <div
-                id="result-email"
-                class="result-value"
-            ></div>
-
+            <div id="result-email" class="result-value"></div>
         </div>
 
         <div class="result-row">
-
             <span class="result-label">
                 Status
             </span>
 
-            <div
-                id="result-status"
-                class="result-value"
-            ></div>
-
+            <div id="result-status" class="result-value"></div>
         </div>
 
-        <!-- POINTS -->
-
         <div class="result-row">
-
             <span class="result-label">
-                Owner Points
+                Reputation Points
             </span>
 
-            <div
-                id="result-points"
-                class="result-value points-value"
-            >
-                0 points
-            </div>
-
+            <div id="result-points" class="points-value"></div>
         </div>
 
     </div>
 
-    <!-- SCAN AGAIN -->
-
-    <button
-        id="scan-again"
-        class="btn hidden"
-    >
+    <button id="scan-again" class="btn hidden">
         📷 Scan Another Code
     </button>
 
@@ -353,21 +301,13 @@
     ========================================== */
 
     const status =
-        document.getElementById(
-            "status"
-        );
-
+        document.getElementById("status");
 
     const result =
-        document.getElementById(
-            "result"
-        );
-
+        document.getElementById("result");
 
     const scanAgain =
-        document.getElementById(
-            "scan-again"
-        );
+        document.getElementById("scan-again");
 
 
     let scanner = null;
@@ -405,13 +345,6 @@
             text.trim();
 
 
-        /*
-         * Your generator creates QR codes
-         * containing ONLY:
-         *
-         * BUL-XXXXXXXX
-         */
-
         if (
             /^BUL-[A-Z0-9-]+$/i.test(
                 text
@@ -423,11 +356,6 @@
         }
 
 
-        /*
-         * Compatibility with QR codes
-         * containing additional text.
-         */
-
         const match =
             text.match(
                 /BUL-[A-Z0-9-]+/i
@@ -436,8 +364,7 @@
 
         if (match) {
 
-            return match[0]
-                .toUpperCase();
+            return match[0].toUpperCase();
 
         }
 
@@ -456,14 +383,13 @@
     ) {
 
         /*
-         * Your current generator creates:
+         * QR INDEX STRUCTURE:
          *
          * qrIndex
-         *    └── BUL-XXXXXXXX
+         *   └── BUL-XXXXXXXX
          *
-         * So we directly search:
-         *
-         * qrIndex/{CODE_ID}
+         * This avoids collection-group
+         * indexes completely.
          */
 
         const qrRef =
@@ -493,10 +419,6 @@
             qrSnapshot.data();
 
 
-        /*
-         * Get owner UID
-         */
-
         const ownerId =
             qrData.ownerId;
 
@@ -513,7 +435,9 @@
 
 
         /*
-         * Get user profile
+         * USER:
+         *
+         * users/{OWNER_UID}
          */
 
         const userRef =
@@ -530,67 +454,35 @@
             );
 
 
-        let ownerName =
-            "Unknown Owner";
-
-        let ownerEmail =
-            "Unknown";
-
-        let currentPoints =
-            0;
-
-
         if (
-            userSnapshot.exists()
+            !userSnapshot.exists()
         ) {
 
-            const userData =
-                userSnapshot.data();
-
-
-            ownerName =
-                userData.fullName ||
-                "Unknown Owner";
-
-
-            ownerEmail =
-                userData.email ||
-                "Unknown";
-
-
-            currentPoints =
-                Number(
-                    userData.points || 0
-                );
+            return null;
 
         }
 
 
+        const userData =
+            userSnapshot.data();
+
+
         /*
-         * ======================================
-         * ADD 1 POINT
-         * ======================================
+         * CURRENT POINTS
          *
-         * Every successful scan gives
-         * the owner +1 point.
+         * If points does not exist,
+         * start at 0.
          */
 
-        await updateDoc(
-            userRef,
-            {
-                points:
-                    increment(1)
-            }
-        );
+        const currentPoints =
+            Number(
+                userData.points || 0
+            );
 
 
         /*
-         * Calculate new points
+         * RETURN INFORMATION
          */
-
-        const newPoints =
-            currentPoints + 1;
-
 
         return {
 
@@ -607,15 +499,84 @@
                 "Unknown",
 
             ownerName:
-                ownerName,
+                userData.fullName ||
+                "Unknown Owner",
 
             ownerEmail:
-                ownerEmail,
+                userData.email ||
+                "Unknown",
 
             points:
-                newPoints
+                currentPoints,
+
+            ownerId:
+                ownerId
 
         };
+
+    }
+
+
+    /* ==========================================
+       ADD REPUTATION POINT
+    ========================================== */
+
+    async function addReputationPoint(
+        ownerId
+    ) {
+
+        /*
+         * ADD +1 POINT
+         *
+         * users/{OWNER_UID}
+         */
+
+        const userRef =
+            doc(
+                db,
+                "users",
+                ownerId
+            );
+
+
+        await updateDoc(
+            userRef,
+            {
+
+                points:
+                    increment(1)
+
+            }
+        );
+
+
+        /*
+         * Read the updated
+         * account information.
+         */
+
+        const updatedSnapshot =
+            await getDoc(
+                userRef
+            );
+
+
+        if (
+            !updatedSnapshot.exists()
+        ) {
+
+            return 0;
+
+        }
+
+
+        const updatedData =
+            updatedSnapshot.data();
+
+
+        return Number(
+            updatedData.points || 0
+        );
 
     }
 
@@ -629,49 +590,37 @@
     ) {
 
         document
-            .getElementById(
-                "result-code"
-            )
+            .getElementById("result-code")
             .innerText =
             data.codeID;
 
 
         document
-            .getElementById(
-                "result-item"
-            )
+            .getElementById("result-item")
             .innerText =
             data.itemName;
 
 
         document
-            .getElementById(
-                "result-owner"
-            )
+            .getElementById("result-owner")
             .innerText =
             data.ownerName;
 
 
         document
-            .getElementById(
-                "result-email"
-            )
+            .getElementById("result-email")
             .innerText =
             data.ownerEmail;
 
 
         document
-            .getElementById(
-                "result-status"
-            )
+            .getElementById("result-status")
             .innerText =
             data.status;
 
 
         document
-            .getElementById(
-                "result-points"
-            )
+            .getElementById("result-points")
             .innerText =
             data.points + " points";
 
@@ -710,7 +659,7 @@
 
 
         /*
-         * Stop camera after successful scan
+         * STOP CAMERA
          */
 
         if (scanner) {
@@ -807,12 +756,59 @@
             }
 
 
-            /*
-             * SUCCESS
-             */
+            /* ==================================
+               ADD +1 REPUTATION POINT
+            ================================== */
 
             showStatus(
-                "✅ QR verified. +1 point awarded!",
+                "⭐ Recording reputation point...",
+                "loading"
+            );
+
+
+            let newPoints;
+
+
+            try {
+
+                newPoints =
+                    await addReputationPoint(
+                        data.ownerId
+                    );
+
+            }
+            catch (pointsError) {
+
+                console.error(
+                    "Points error:",
+                    pointsError
+                );
+
+
+                /*
+                 * The QR itself is valid.
+                 *
+                 * If points cannot be
+                 * updated, still show
+                 * the item information.
+                 */
+
+                newPoints =
+                    data.points;
+
+            }
+
+
+            data.points =
+                newPoints;
+
+
+            /* ==================================
+               DISPLAY RESULT
+            ================================== */
+
+            showStatus(
+                "✅ QR code verified. +1 reputation point!",
                 "success"
             );
 
@@ -820,7 +816,6 @@
             displayResult(
                 data
             );
-
 
         }
         catch (error) {
@@ -922,7 +917,8 @@
                 (errorMessage) => {
 
                     /*
-                     * Ignore normal scanning errors.
+                     * Ignore normal
+                     * temporary scan errors.
                      */
 
                 }
