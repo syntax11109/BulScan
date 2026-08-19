@@ -104,6 +104,12 @@
             color: #1a73e8;
         }
 
+        .points-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f9ab00;
+        }
+
         .invalid {
             background: #fce8e6;
             color: #c5221f;
@@ -156,11 +162,9 @@
         Scan a BulScan QR Code to find the registered item.
     </div>
 
-
     <!-- CAMERA -->
 
     <div id="reader"></div>
-
 
     <!-- STATUS -->
 
@@ -170,7 +174,6 @@
     >
         📷 Point the camera at a BulScan QR code.
     </div>
-
 
     <!-- RESULT -->
 
@@ -182,7 +185,6 @@
         <div class="result-title">
             ✅ Data Found
         </div>
-
 
         <div class="result-row">
 
@@ -197,7 +199,6 @@
 
         </div>
 
-
         <div class="result-row">
 
             <span class="result-label">
@@ -210,7 +211,6 @@
             ></div>
 
         </div>
-
 
         <div class="result-row">
 
@@ -225,7 +225,6 @@
 
         </div>
 
-
         <div class="result-row">
 
             <span class="result-label">
@@ -238,7 +237,6 @@
             ></div>
 
         </div>
-
 
         <div class="result-row">
 
@@ -253,8 +251,24 @@
 
         </div>
 
-    </div>
+        <!-- POINTS -->
 
+        <div class="result-row">
+
+            <span class="result-label">
+                Owner Points
+            </span>
+
+            <div
+                id="result-points"
+                class="result-value points-value"
+            >
+                0 points
+            </div>
+
+        </div>
+
+    </div>
 
     <!-- SCAN AGAIN -->
 
@@ -270,7 +284,6 @@
 
 <script type="module">
 
-
     /* ==========================================
        FIREBASE IMPORT
     ========================================== */
@@ -284,7 +297,9 @@
     import {
         getFirestore,
         doc,
-        getDoc
+        getDoc,
+        updateDoc,
+        increment
     }
     from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -391,10 +406,10 @@
 
 
         /*
-         * The NEW generator creates QR codes
+         * Your generator creates QR codes
          * containing ONLY:
          *
-         * BUL-XXXXXXXXXXXX
+         * BUL-XXXXXXXX
          */
 
         if (
@@ -409,10 +424,8 @@
 
 
         /*
-         * Extra compatibility:
-         *
-         * If a QR contains other text but
-         * includes a BUL- code ID.
+         * Compatibility with QR codes
+         * containing additional text.
          */
 
         const match =
@@ -443,19 +456,14 @@
     ) {
 
         /*
-         * IMPORTANT
-         *
-         * Your UPDATED GENERATOR creates:
+         * Your current generator creates:
          *
          * qrIndex
-         *     └── BUL-XXXXXXXXXXXX
+         *    └── BUL-XXXXXXXX
          *
-         * Therefore we directly search:
+         * So we directly search:
          *
          * qrIndex/{CODE_ID}
-         *
-         * No collection-group query.
-         * No Firestore index required.
          */
 
         const qrRef =
@@ -472,10 +480,6 @@
             );
 
 
-        /*
-         * CODE DOES NOT EXIST
-         */
-
         if (
             !qrSnapshot.exists()
         ) {
@@ -490,9 +494,7 @@
 
 
         /*
-         * The generator stores the
-         * Firebase Authentication UID
-         * here.
+         * Get owner UID
          */
 
         const ownerId =
@@ -511,9 +513,7 @@
 
 
         /*
-         * Find the owner's profile.
-         *
-         * users/{OWNER_UID}
+         * Get user profile
          */
 
         const userRef =
@@ -536,6 +536,9 @@
         let ownerEmail =
             "Unknown";
 
+        let currentPoints =
+            0;
+
 
         if (
             userSnapshot.exists()
@@ -554,13 +557,40 @@
                 userData.email ||
                 "Unknown";
 
+
+            currentPoints =
+                Number(
+                    userData.points || 0
+                );
+
         }
 
 
         /*
-         * Return all information
-         * needed by the scanner.
+         * ======================================
+         * ADD 1 POINT
+         * ======================================
+         *
+         * Every successful scan gives
+         * the owner +1 point.
          */
+
+        await updateDoc(
+            userRef,
+            {
+                points:
+                    increment(1)
+            }
+        );
+
+
+        /*
+         * Calculate new points
+         */
+
+        const newPoints =
+            currentPoints + 1;
+
 
         return {
 
@@ -580,7 +610,10 @@
                 ownerName,
 
             ownerEmail:
-                ownerEmail
+                ownerEmail,
+
+            points:
+                newPoints
 
         };
 
@@ -635,6 +668,14 @@
             data.status;
 
 
+        document
+            .getElementById(
+                "result-points"
+            )
+            .innerText =
+            data.points + " points";
+
+
         result.classList.remove(
             "hidden"
         );
@@ -655,11 +696,6 @@
         decodedText
     ) {
 
-        /*
-         * Prevent the camera from
-         * processing the same QR multiple times.
-         */
-
         if (
             isProcessing
         ) {
@@ -674,7 +710,7 @@
 
 
         /*
-         * Stop scanner.
+         * Stop camera after successful scan
          */
 
         if (scanner) {
@@ -705,10 +741,6 @@
             );
 
 
-        /*
-         * INVALID QR FORMAT
-         */
-
         if (!codeID) {
 
             showStatus(
@@ -732,7 +764,7 @@
 
 
         /* ======================================
-           SEARCH FIREBASE
+           SEARCH DATABASE
         ====================================== */
 
         showStatus(
@@ -776,11 +808,11 @@
 
 
             /*
-             * CODE FOUND
+             * SUCCESS
              */
 
             showStatus(
-                "✅ QR code verified.",
+                "✅ QR verified. +1 point awarded!",
                 "success"
             );
 
@@ -840,11 +872,6 @@
         );
 
 
-        /*
-         * Remove previous scanner
-         * if one exists.
-         */
-
         if (scanner) {
 
             try {
@@ -895,11 +922,7 @@
                 (errorMessage) => {
 
                     /*
-                     * Normal camera scanning
-                     * produces many temporary
-                     * scan errors.
-                     *
-                     * Do nothing here.
+                     * Ignore normal scanning errors.
                      */
 
                 }
