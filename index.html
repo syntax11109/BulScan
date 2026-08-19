@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>BulScan Admin Scanner</title>
+    <title>BulScanner</title>
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
@@ -164,13 +164,13 @@
     <div id="reader"></div>
 
     <div id="status" class="status">
-        📷 Point the camera at a BulScan QR code.
+        Point the camera at a BulScan QR code.
     </div>
 
     <div id="result" class="result hidden">
 
         <div class="result-title">
-            ✅ Data Found
+            Data Found
         </div>
 
         <div class="result-row">
@@ -224,7 +224,7 @@
     </div>
 
     <button id="scan-again" class="btn hidden">
-        📷 Scan Another Code
+        Scan Another Code
     </button>
 
 </div>
@@ -693,7 +693,7 @@
         if (!codeID) {
 
             showStatus(
-                "❌ Data invalid",
+                "Data invalid",
                 "invalid"
             );
 
@@ -717,7 +717,7 @@
         ====================================== */
 
         showStatus(
-            "🔎 Searching BulScan database...",
+            "Searching BulScan database...",
             "loading"
         );
 
@@ -737,7 +737,7 @@
             if (!data) {
 
                 showStatus(
-                    "❌ Data invalid",
+                    "Data invalid",
                     "invalid"
                 );
 
@@ -761,7 +761,7 @@
             ================================== */
 
             showStatus(
-                "⭐ Recording reputation point...",
+                "Recording reputation point...",
                 "loading"
             );
 
@@ -808,7 +808,7 @@
             ================================== */
 
             showStatus(
-                "✅ QR code verified. +1 reputation point!",
+                "QR code verified. +1 reputation point!",
                 "success"
             );
 
@@ -827,7 +827,7 @@
 
 
             showStatus(
-                "❌ Firebase error: " +
+                "Firebase error: " +
                 error.message,
                 "invalid"
             );
@@ -863,7 +863,7 @@
 
 
         showStatus(
-            "📷 Point the camera at a BulScan QR code."
+            "Point the camera at a BulScan QR code."
         );
 
 
@@ -935,7 +935,7 @@
 
 
             showStatus(
-                "❌ Camera could not be opened. Please allow camera permission.",
+                "Camera could not be opened. Please allow camera permission.",
                 "invalid"
             );
 
